@@ -21,9 +21,7 @@ def eval_one_epoch(model, loader, npoint=50000, save_dir=None, ignore_msg=True, 
     results = {}
     metrics = {}
     metrics_tmp = {key:[] for key in ['psnr', 'ssim']} # , 'rmse', 'mse', 'mae']}
-    if use_tqdm:
-        loader = tqdm(loader, ncols=50)
-    
+    loader = tqdm(loader, ncols=10)
     with torch.no_grad():
         for item in loader:
             item = convert_cuda(item)
@@ -36,10 +34,10 @@ def eval_one_epoch(model, loader, npoint=50000, save_dir=None, ignore_msg=True, 
             output = model(item, is_eval=True, eval_npoint=npoint) # B, 1, N
             output = output[0, 0].data.cpu().numpy()
             output = output.reshape(image.shape)
-
-            psnr = peak_signal_noise_ratio(image, output)
-            ssim = structural_similarity(image, output)
-
+            
+            psnr = peak_signal_noise_ratio(image, output,data_range=1.0)
+            ssim = structural_similarity(image, output, data_range=1.0)
+            print (np.max(image),np.max(output) , psnr,ssim)
             if not ignore_msg:
                 print('{}, PSNR: {:.4}, SSIM: {:.4}'.format(
                     name, psnr, ssim
@@ -63,8 +61,9 @@ def eval_one_epoch(model, loader, npoint=50000, save_dir=None, ignore_msg=True, 
                 output = np.clip(output, 0, 1)
                 output *= 255.
                 output = output.astype(np.uint8)
-                save_path = os.path.join(save_dir, f'{name}.nii.gz')
-                save_nifti(output, save_path)
+                save_path = os.path.join(save_dir, f'{name}.npy')
+                np.save( save_path,output)
+                #save_nifti(output, save_path)
 
     for dst_name in metrics.keys():
         dst_met = metrics[dst_name]
@@ -101,7 +100,8 @@ if __name__ == '__main__':
     
     model = DIF_Net(
         num_views=args.num_views,
-        combine=args.combine
+        combine=args.combine,
+        mid_ch=128
     )
     model.load_state_dict(ckpt)
     model = model.cuda()

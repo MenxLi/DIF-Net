@@ -1,0 +1,23 @@
+Namespace(name='cbctrec', epoch=400, dst_list='cbctrec', split='test', combine='mlp', num_views=15, view_offset=0, out_res=256, eval_npoint=5000, visualize=False, batch_size=1, lr=0.01, num_workers=2, num_points=10000, random_views=False)
+mixed_dataset: ['cbctrec']
+CBCT_dataset, name: cbctrec, split: train, len: 144.
+train line 39
+train line 48
+mixed_dataset: ['cbctrec']
+CBCT_dataset, name: cbctrec, split: eval, len: 10.
+train line 62
+DIF_Net, mid_ch: 128, combine: mlp
+train line 68
+train line 84
+train line 90 144
+train line 92
+train line 94
+train line 97
+train line 100
+train line 102
+train line 104
+train line 106
+train line 92
+train line 94
+train line 97
+train line 100

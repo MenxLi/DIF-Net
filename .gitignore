@@ -1,3 +1,5 @@
+scripts/*
+data/*
 __backup/
 env.sh
 test_p*

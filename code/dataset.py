@@ -24,11 +24,11 @@ class Geometry(object):
     def project(self, points, angle):
         # points: [N, 3] ranging from [0, 1]
         # d_points: [N, 2] ranging from [-1, 1]
-
+        # e.g point max 1, point shape (10000, 3) , points[0] = [0.83529412 0.41176471 0.76078431] ,angle 6.098385739321364, 
         points = deepcopy(points).astype(float)
-        points[:, :2] -= 0.5 # [-0.5, 0.5]
+        points[:, :2] -= 0.5 # [-0.5, 0.5] 
         points[:, 2] = 0.5 - points[:, 2] # [-0.5, 0.5]
-        points *= self.v_res * self.v_spacing # mm
+        points *= self.v_res * self.v_spacing # mm self.v_res= 256  self.v_spacing =1
 
         angle = -1 * angle # inverse direction
         rot_M = np.array([
@@ -38,14 +38,12 @@ class Geometry(object):
         ])
         points = points @ rot_M.T
 
-        d1 = self.DSO
-        d2 = self.DSD
-        
-        coeff = (d2) / (d1 - points[:, 0]) # N,
+        d1 = self.DSO #1000
+        d2 = self.DSD #20
+        coeff = (d2) / (d1 - points[:, 0]) # N, shape (10000,)
         d_points = points[:, [2, 1]] * coeff[:, None] # [N, 2] float
         d_points /= (self.p_res * self.p_spacing)
         d_points *= 2 # NOTE: some points may fall outside [-1, 1]
-
         return d_points
 
 
@@ -100,7 +98,7 @@ class CBCT_dataset(Dataset):
         dst_root = './data'
         
         # load dataset info
-        if dst_name in ['knee_cbct']:
+        if dst_name in ['head_cbct']:
             data_root = os.path.join(dst_root, dst_name)
             with open(os.path.join(data_root, 'info.json'), 'r') as f:
                 cfg = json.load(f)
@@ -151,7 +149,7 @@ class CBCT_dataset(Dataset):
         views = np.linspace(0, len(projs), self.num_views, endpoint=False).astype(int)
         offset = np.random.randint(len(projs) - views[-1]) if self.random_views else self.view_offset
         views += offset
-        projs = projs[views].astype(float) / 255.
+        projs = projs[views].astype(float) # / 255.
         projs = projs[:, None, ...]
         angles = angles[views]
 
@@ -159,8 +157,18 @@ class CBCT_dataset(Dataset):
         # projs = projs * self.cfg['projection_norm'] / 0.2
         
         return projs, angles
-    
     def load_ct(self, name):
+        data_dict={}
+        data_dict  = dict (np.load(os.path.join(self.data_root, self.cfg['image'].format(name))))
+        config = json.loads(str(data_dict['config']))
+        head  = data_dict['volume']
+        image = head.astype(np.float32)  #/ 255.
+        if self.out_res == 128:
+            image = scipy.ndimage.zoom(image, 0.5, order=3, prefilter=False)
+        elif self.out_res != 256:
+            raise ValueError
+        return image
+    def old_load_ct(self, name):
         image = read_nifti(os.path.join(self.data_root, self.cfg['image'].format(name)))
         image = image.astype(np.float32) / 255.
         if self.out_res == 128:
@@ -176,9 +184,10 @@ class CBCT_dataset(Dataset):
     def sample_points(self, points, values=None):
         choice = np.random.choice(len(points), size=self.npoint, replace=False)
         points = points[choice]
+        
         if values is not None:
             values = values[choice]
-            values = values.astype(float) / 255.
+            values = values.astype(float) #/ 255.
             return points, values
         else: return points
 
